@@ -214,13 +214,13 @@ def relocate(dir, pattern):
 					}
 				i = 0
 				for file in episode.videos:
-					i++
+					i=i+1
 					name, ext = os.path.splitext(file)
 					#print file, "->" , os.path.join(dir, (pattern % ctx)+ext)
 					print os.path.join(dir, (pattern % ctx)+ext)+(("."+str(i))if i>1 else "")
 				i = 0
 				for file, lang in episode.subtitles.iteritems():
-					i++
+					i=i+1
 					name, ext = os.path.splitext(file)
 					#print file, "->" , os.path.join(dir, (pattern % ctx)+"."+lang+ext)
 					print os.path.join(dir, (pattern % ctx)+"."+lang+ext)+(("."+str(i))if i>1 else "")
