@@ -5,6 +5,8 @@ import re
 import os
 import string
 import difflib
+import distutils
+import shutil
 
 import urllib
 import urllib2
@@ -17,24 +19,32 @@ video_extensions = ['.mkv', '.avi', '.wmv', ".mp4"]
 subtitles_extensions = ['.srt']
 
 show_file_patterns = [
-'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+]+[0-9A-Z])(?:[\\.\\ \\- _\\+\\[]?)S(\\d{1,2}).?[EexX]\D*(\\d{2})\D*',
-'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+]+[0-9A-Z])(?:[\\.\\ \\- _\\+\\[]?)S(\\d{1,2})-(\\d{2})\D*',
-'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+]+[A-Z])(?:[\\.\\ \\- _\\+\\[])(\\d)(\\d{2})\D*', #show.104 // season 1 ep 04
-'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+]+[A-Z])(?:[\\.\\ \\- _\\+\\[])(\\d)(\\d{2})\Z',
-'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9a-zA-Z\\. _\\-\\+]+?)(?:[\\.\\ \\- _\\+\\[]?)(?:Season|Saison) (\\d+)(?:[\\.\\ \\- _\\+]*)Episode (\\d+).*',
+'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+\']+[0-9A-Z ])(?:[\\.\\ \\- _\\+\\[]*)[S\\[](\\d{1,2}).{0,7}[EexX][^0-9]*(\\d{2})[^0-9]*',
+'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+\']+[0-9A-Z ])(?:[\\.\\ \\- _\\+\\[]*)(\\d{1,2})x(\\d{2})[^0-9].*',
+'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+\']+[0-9A-Z ])(?:[\\.\\ \\- _\\+\\[]*)[S\\[](\\d{1,2})-(\\d{2})\D*',
+'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+\']+[A-Z])(?:[\\.\\ \\- _\\+\\[]?)(\\d)(\\d{2})\D*', #show.104 // season 1 ep 04
+'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+\']+[A-Z])(?:[\\.\\ \\- _\\+\\[]?)(\\d)(\\d{2})\Z',
+'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9a-zA-Z\\. _\\-\\+\']+)(?:[\\.\\ \\- _\\+\\[]?)(?:Season|Saison)[. ](\\d+)(?:[\\.\\ \\- _\\+]*)Episode (\\d+)(?:\\D.*|\\Z)',
+'(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9a-zA-Z\\. _\\-\\+\']+)(?:[\\.\\ \\- _\\+\\[]?)(?:Season|Saison)[. ](\\d+)\\D{0,7}(\\d{2})(?:\\D.*|\\Z)',
 ]
 show_dir_patterns = [
-'.*\\/([0-9a-zA-Z\\. _\\-\\+]+?)(?:[\\.\\ \\- _\\+\\/\\[]?)(?:Season|Saison) (\\d{1,2})\\/(?:\\d?)(\\d{1,2})[^0-9p].*', #/foo/bar/Show Season 1/01, #/foo/bar/Show Season 1/101...., /foo/bar/Show/Season 1/101....
-'.*\\/([0-9a-zA-Z\\. _\\-\\+]+?)(?:[\\.\\ \\- _\\+\\/\\[]?)(?:Season|Saison) (\\d{1,2})\\/\\[?(?:\\d+)[Ex\\-](\\d{1,2})[^0-9p].*', #/foo/bar/Show Season 1/1x01
-'.*\\/([0-9a-zA-Z\\. _\\-\\+]+?)(?:[\\.\\ \\- _\\+\\/\\[]?)(?:Season|Saison) (\\d{1,2})\\/.*(\\d+)' # #/foo/bar/Show Season 1/balaba-101
+'.*\\/([0-9a-zA-Z\\. _\\-\\+]+)(?:[\\.\\ \\- _\\+\\/\\[]?)/?(?:Season|Saison) (\\d{1,2})\\/(?:\\d??)(\\d{1,2})[^0-9p].*', #/foo/bar/Show Season 1/01, #/foo/bar/Show Season 1/101...., /foo/bar/Show/Season 1/101....
+'.*\\/([0-9a-zA-Z\\. _\\-\\+]+)(?:[\\.\\ \\- _\\+\\/\\[]?)/?(?:Season|Saison) (\\d{1,2})\\/\\[?(?:\\d+)[Ex\\-](\\d{1,2})[^0-9p].*', #/foo/bar/Show Season 1/1x01
+'.*\\/([0-9a-zA-Z\\. _\\-\\+]+)(?:[\\.\\ \\- _\\+\\/\\[]?)/?(?:Season|Saison) (\\d{1,2})\\/.*(\\d+)', # #/foo/bar/Show Season 1/balaba-101
+'.*\\/([0-9a-zA-Z\\. _\\-\\+\']+)/[0-9a-zA-Z\\._\\-\\+]*\\D(\\d)(\\d{2})\\D.*', # #/foo/bar/Show/balaba-101
+'.*\\/([0-9a-zA-Z\\. _\\-\\+\']+)/[\\[]?(\\d{1,2})[EexX-](\\d{1,2})\\]\\D.*', #24H/[2x01] - 08H00-09H00.avi 
+'.*\\/([0-9a-zA-Z\\. _\\-\\+\']+)/s-(\\d{1,2})\\D+(\\d{1,2})\\D.*',  #show/s-1 ep 4 truc.avi
+'.*\\/([0-9a-zA-Z\\. _\\-\\+\']+)/(?:Season|Saison)[0-9\\. _\\-\\+]+/S(\\d{1,2})E(\\d{1,2})\\D.*',  #show/S02E23.avi
+'.*\\/([0-9a-zA-Z\\. _\\-\\+\']+)/S(\\d{1,2})E(\\d{1,2})\\D.*',  #show/S02E23.avi
+'.*\\/([0-9a-zA-Z\\. _\\-\\+\']+?)/[0-9a-zA-Z\\. _\\-\\+]*\\D(\\d{1,2})[EexX-](\\d{1,2})\\D.*',
 ]
 
 useless_name_flags = [
-'download at superseeds.org', 'Epz-', 'EPZ-', 'H264', 'x264', 'X264', '720p'
+'download at superseeds.org', 'Epz-', 'EPZ-', 'H264', 'x264', 'X264', '720p', 'Hi10p', 'sample',
 ]
 
 movies_flag = [
-'BluRay', 'DVDRIP', 'TS', 'R5', 'DVDSRC'
+'BluRay', 'DVDRIP', 'TS', 'R5', 'DVDSRC', 'Blu-Ray', 'Blu-ray'
 ]
 
 
@@ -53,7 +63,7 @@ class BetaSeries:
 	def load_shows(self):
 		lst = self.build.data(self.build.url("/shows/display/all"))['shows']
 		for k, v in lst.iteritems():
-				self.shows[v['title'].title()] = v['url']
+				self.shows[v['title'].title().replace("'S", "'s")] = v['url']
 				
 	def shows_display(self, show):
 		if not show in self.shows:
@@ -147,7 +157,8 @@ class Episode:
 def clean_name(show):
 	for char in ['_', '.', '+']:
 		show = string.replace(show, char, ' ')
-		show = show.title()
+	
+	show = show.title().replace("'S", "'s")
 	cn = difflib.get_close_matches(show, shows_names.keys())
 	if len(cn) > 0:
 		return shows_names[cn[0]]
@@ -197,9 +208,19 @@ def print_list():
 			for num, episode in sorted(episodes.iteritems()):
 				e = e+1
 				#size += episode.size
-				print show, "S%02dE%02d" %(season,num),episode.name, "      // %d files" %len(episode.videos), " - %d subtitles" % len(episode.subtitles)
+				try:
+					print show, "S%02dE%02d" %(season,num),episode.name, "      // %d files" %len(episode.videos), " - %d subtitles" % len(episode.subtitles)
+				except: pass
 				for k, v in episode.videos.iteritems(): size += v 
 	print "%d shows - %d seasons %d episodes - %s" % ( len(shows), s, e, prettySize(size))
+	
+def move(src, dest, name):
+	if not os.path.exists(dest):
+		if not os.makedirs(dest):
+			return False
+	if not shutil.move(src, os.path.join(dest, name)):
+			return False
+	return True
 	
 def relocate(dir, pattern):
 	for show, seasons, in sorted(shows.iteritems()):
@@ -216,14 +237,16 @@ def relocate(dir, pattern):
 				for file in episode.videos:
 					i=i+1
 					name, ext = os.path.splitext(file)
-					#print file, "->" , os.path.join(dir, (pattern % ctx)+ext)
-					print os.path.join(dir, (pattern % ctx)+ext)+(("."+str(i))if i>1 else "")
+					new_path, new_name = os.path.split((pattern % ctx)+ext+(("."+str(i))if i>1 else ""))
+					if debug: print file, "->" , os.path.join(dir, new_name)
+					move(file, os.path.join(dir, new_path), new_name)
 				i = 0
 				for file, lang in episode.subtitles.iteritems():
 					i=i+1
 					name, ext = os.path.splitext(file)
-					#print file, "->" , os.path.join(dir, (pattern % ctx)+"."+lang+ext)
-					print os.path.join(dir, (pattern % ctx)+"."+lang+ext)+(("."+str(i))if i>1 else "")
+					new_path, new_name = os.path.split((pattern % ctx)+"."+lang+ext+(("."+str(i))if i>1 else ""))
+					if debug : print file, "->" , os.path.join(dir, new_name)
+					move(file, os.path.join(dir, new_path), new_name)
 	
 def match_and_add(name, pattern, path):
 	for flag in useless_name_flags:
@@ -231,12 +254,12 @@ def match_and_add(name, pattern, path):
 	date_check = re.match('.*(20\\d{2}).*', name) or re.match('.*(19\\d{2}).*', name)
 	if date_check:
 		name = string.replace(name, date_check.group(1), '.');
-	result = result = re.match(pattern, name, re.I)
-	#print name, pattern, result is not None
-	if not result : return None
+	result = re.match(pattern, name, re.I)
+	if not result  : return None
 	name = clean_name(result.group(1))
 	if not name:
 		return False
+	if "Action" in name or "Smile" in name or "7 Vidas" in name : print name, "!!!!", result.group(0),  result.group(1), result.group(2), result.group(3), pattern, result is not None
 	return add_episode(name, int(result.group(2)), int(result.group(3)), path)
 	
 def find_subtitles(dirname, ep, movie_name):
@@ -272,8 +295,9 @@ def explore_dir(dirname):
 						if ep: break
 					
 					if not ep:
+						#print dirname, root, path, string.replace(path, dirname, "")
 						for pattern in show_dir_patterns:
-							ep = match_and_add(path, pattern, path)
+							ep = match_and_add(string.replace(path, dirname, "/"), pattern, path)
 							if ep: break
 				if ep:
 					find_subtitles(root, ep, name)
@@ -301,6 +325,7 @@ debug = options.debug
 for dirname in options.input:
 	print "Exploring directory " + dirname 
 	explore_dir(dirname)
+#quit()
 print "--------------------------------"
 set_shows_info()
 print "--------------------------------"
