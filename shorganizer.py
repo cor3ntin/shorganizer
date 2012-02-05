@@ -197,7 +197,7 @@ def print_list():
 			for num, episode in sorted(episodes.iteritems()):
 				e = e+1
 				#size += episode.size
-				print show, "S%02dE%02d" %(season,num),episode.name, "      // %d files" %len(episode.videos), " & %d subtitles" % len(episode.subtitles)
+				print show, "S%02dE%02d" %(season,num),episode.name, "      // %d files" %len(episode.videos), " - %d subtitles" % len(episode.subtitles)
 				for k, v in episode.videos.iteritems(): size += v 
 	print "%d shows - %d seasons %d episodes - %s" % ( len(shows), s, e, prettySize(size))
 	
@@ -214,14 +214,16 @@ def relocate(dir, pattern):
 					}
 				i = 0
 				for file in episode.videos:
+					i++
 					name, ext = os.path.splitext(file)
 					#print file, "->" , os.path.join(dir, (pattern % ctx)+ext)
-					print os.path.join(dir, (pattern % ctx)+ext)+(("."+str(i))if i>0 else "")
+					print os.path.join(dir, (pattern % ctx)+ext)+(("."+str(i))if i>1 else "")
 				i = 0
 				for file, lang in episode.subtitles.iteritems():
+					i++
 					name, ext = os.path.splitext(file)
 					#print file, "->" , os.path.join(dir, (pattern % ctx)+"."+lang+ext)
-					print os.path.join(dir, (pattern % ctx)+"."+lang+ext)+(("."+str(i))if i>0 else "")
+					print os.path.join(dir, (pattern % ctx)+"."+lang+ext)+(("."+str(i))if i>1 else "")
 	
 def match_and_add(name, pattern, path):
 	for flag in useless_name_flags:
