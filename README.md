@@ -1,20 +1,29 @@
+#Manage your digital tv shows collection with Shorganizer !
+
 Your tv episodes collection is upside down ? 
 This python tool aim to clean all your messy collection by giving each episode a pretty name and a coherent location.
-The subtitles are also managed !
 
-#Features
- * Rename & Move files to organized directories
- * Look online for episode name & number of episodes using [BetaSeries](http://betaseries.com)
- * Find and renames subtitles
+##Features
+ * Rename & Move episodes files (video & subtitles) to organized directories
+ * Look online for episodes name and more using [BetaSeries](http://betaseries.com)
 
-#Instructions
-    ./shorganizer.py  --in=dir --in=other_dir --out=destination_dir
-      --list #list all episodes found
-      --relocate #move episodes and subtitles to the destination directory
-      --debug #display more log
-      --pattern #renamming pattern, must be a python formating string. valides keys are : show, season,  episode, episode_name and episode_str(SXXEXX)
+##Instructions
+###Options
+`./shorganizer.py  --in=dir --in=other_dir --out=destination_dir`
 
-#TODO
+   `--list` list all episodes found
+
+   `--relocate` move episodes and subtitles to the destination directory
+   
+   `--debug` display more log
+   
+   `--pattern` renamming pattern, must be a python formating string. valides keys are : show, season,  episode, episode_name and episode_str (SXXEXX)     
+
+###Custom names
+You can modify the `shows` file in the sources directory to help detect shows wrongly named.
+The left part of a line is the name on your disk, the second should match the name on betaseries
+
+##TODO
  * Download missing subtitles
  * Manages languages for subtitles and shows/episodes names
  * Export statistics for missings episodes, incompletes series
