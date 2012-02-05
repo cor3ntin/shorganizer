@@ -18,6 +18,12 @@ import argparse
 video_extensions = ['.mkv', '.avi', '.wmv', ".mp4"]
 subtitles_extensions = ['.srt']
 
+langs = {
+ 'en': [ 'VO', 'en'],
+ 'fr': [ 'VF', 'fr'],
+}
+ 
+
 show_file_patterns = [
 '(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+\']+[0-9A-Z ])(?:[\\.\\ \\- _\\+\\[]*)[S\\[](\\d{1,2}).{0,7}[EexX][^0-9]*(\\d{2})[^0-9]*',
 '(?:[\\.\\ \\- _\\+]*)(?:\\[.*\\])*(?:[\\.\\ \\- _\\+]*)([0-9A-Z\\.\\- _\\+\']+[0-9A-Z ])(?:[\\.\\ \\- _\\+\\[]*)(\\d{1,2})x(\\d{2})[^0-9].*',
@@ -238,7 +244,7 @@ def relocate(dir, pattern):
 					i=i+1
 					name, ext = os.path.splitext(file)
 					new_path, new_name = os.path.split((pattern % ctx)+ext+(("."+str(i))if i>1 else ""))
-					if debug: print file, "->" , os.path.join(dir, new_name)
+					if debug: print file, "->" , os.path.join(dir, new_path)
 					move(file, os.path.join(dir, new_path), new_name)
 				i = 0
 				for file, lang in episode.subtitles.iteritems():
@@ -246,7 +252,7 @@ def relocate(dir, pattern):
 					name, ext = os.path.splitext(file)
 					new_path, new_name = os.path.split((pattern % ctx)+"."+lang+ext+(("."+str(i))if i>1 else ""))
 					if debug : print file, "->" , os.path.join(dir, new_name)
-					move(file, os.path.join(dir, new_path), new_name)
+					move(file, os.path.join(dir, new_path), new_path)
 	
 def match_and_add(name, pattern, path):
 	for flag in useless_name_flags:
@@ -259,12 +265,11 @@ def match_and_add(name, pattern, path):
 	name = clean_name(result.group(1))
 	if not name:
 		return False
-	if "Action" in name or "Smile" in name or "7 Vidas" in name : print name, "!!!!", result.group(0),  result.group(1), result.group(2), result.group(3), pattern, result is not None
 	return add_episode(name, int(result.group(2)), int(result.group(3)), path)
 	
 def find_subtitles(dirname, ep, movie_name):
 	origin_name = [k for k, v in shows_names.iteritems() if v == ep.show][0]
-	regex = ".*(?:%s|%s).*\\D0?%d.0?%d\\D.*?(en|fr|)\\.srt" %  (  #TODO Add more languages
+	regex = ".*(?:%s|%s).*\\D0?%d.0?%d\\D.*?(en|fr|VF|VO|)\\.srt" %  (  #TODO Add more languages
 		string.replace(ep.show, " ", "[. +-_]"), string.replace(origin_name, " ", "[. +-_]"), ep.season, ep.number)
 	for root, dirs, files in os.walk(dirname):
 		for file in files:
@@ -272,7 +277,11 @@ def find_subtitles(dirname, ep, movie_name):
 			if not ext in subtitles_extensions: continue 
 			result = re.match(regex, file, re.I)
 			if not result : continue
-			ep.subtitles[file] = 'en' if not result.group(1) or len(result.group(1)) == 0 else result.group(1) #TODO guess the language by reading the file
+			def slang(l):
+				for lang, labels in langs.iteritems():
+					if l in labels: return lang
+				return en
+			ep.subtitles[os.path.join(root, file)] = slang('en' if not result.group(1) or len(result.group(1)) == 0 else result.group(1)) #TODO guess the language by reading the file
 
 def explore_dir(dirname):
 	for root, dirs, files in os.walk(dirname):
