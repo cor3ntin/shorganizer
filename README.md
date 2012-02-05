@@ -4,7 +4,7 @@ The subtitles are also managed !
 
 #Features
  * Rename & Move files to organized directories
- * Look online for episode name & number of episodes using [BetaSeries](betaseries.com)
+ * Look online for episode name & number of episodes using [BetaSeries](http://betaseries.com)
  * Find and renames subtitles
 
 #Instructions
