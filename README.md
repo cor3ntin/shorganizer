@@ -17,6 +17,8 @@ This python tool aim to clean all your messy collection by giving each episode a
    
    `--debug` display more log
    
+   `--missing` display missing episodes
+   
    `--pattern` renamming pattern, must be a python formating string. valides keys are : show, season,  episode, episode_name and episode_str (SXXEXX)     
 
 ###Custom names
