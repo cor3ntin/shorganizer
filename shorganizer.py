@@ -191,17 +191,31 @@ def add_episode(show, season, number, file):
 	return ep
 	
 def set_shows_info():
+	missing_all = {}
 	for show, seasons, in sorted(shows.iteritems()):
+		#Parcours sur les séries
 		print 'Downloading list of \'%s\' episodes' % show
 		show_info = bs.shows_episodes(show)
+		show_complet = show_info
+		missing_serie = {}
 		if show_info:
 			#print show, show_info
 			for season, episodes in sorted(seasons.iteritems()):
+				#loop on saison
+				missing_episodes = show_complet['seasons'][str(season-1)]['episodes']
 				for num, episode in sorted(episodes.iteritems()):
+					#loop on episode
 					try:
+						del missing_episodes[str(num-1)]
 						episode.name = show_info['seasons'][str(season-1)]['episodes'][str(num-1)]['title']
 					except:
 						pass
+				
+				if len(missing_episodes) > 0:
+					missing_serie[season-1] = missing_episodes
+			if len(missing_serie) > 0:
+				missing_all[show] = missing_serie
+	return missing_all
 	
 def print_list():
 	e = 0
@@ -219,6 +233,13 @@ def print_list():
 				for k, v in episode.videos.iteritems(): size += v 
 	print "%d shows - %d seasons %d episodes - %s" % ( len(shows), s, e, prettySize(size))
 	
+def print_missing(missing_all):
+	print "Episode manquants : "
+	for show, season in missing_all.items():
+		for season_num, episodes in season.items():
+			for episode_num, episode in sorted(episodes.iteritems()):
+				print show, "S%02dE%02d" %(season_num+1,int(episode_num)+1)
+
 def move(src, dest, name):
 	try:
 		if not os.path.exists(dest):
@@ -330,6 +351,7 @@ parser.add_argument('--out', action='store', dest='output',
 parser.add_argument('--pattern', action='store', dest='pattern',
                     default='%(show)s/Season %(season)d/%(show)s-%(episode_str)s')
 parser.add_argument('--list', action='store_true')
+parser.add_argument('--missing', action='store_true')
 parser.add_argument('--relocate', action='store_true')
 parser.add_argument('--debug', action='store_true')
 options = parser.parse_args()					
@@ -341,11 +363,13 @@ for dirname in options.input:
 	explore_dir(dirname)
 #quit()
 print "--------------------------------"
-set_shows_info()
+missing_all = set_shows_info()
 print "--------------------------------"
 
 if options.list:
 	print_list()
+if options.missing:
+	print_missing(missing_all)
 print "--------------------------------"
 if options.relocate and options.output:
 	relocate(options.output, options.pattern)
